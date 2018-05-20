@@ -1,0 +1,2 @@
+model_checkpoint_path: "/home/camiloiral/Workspace/kiwi_challenge/German_Traffic_Signs_Detector/models/model3/saved/logistic_regression"
+all_model_checkpoint_paths: "/home/camiloiral/Workspace/kiwi_challenge/German_Traffic_Signs_Detector/models/model3/saved/logistic_regression"

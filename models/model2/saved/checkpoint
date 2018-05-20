@@ -1,0 +1,2 @@
+model_checkpoint_path: "/home/camiloiral/Workspace/kiwi_challenge/German_Traffic_Signs_Detector/models/model2/saved/lenet5_improved"
+all_model_checkpoint_paths: "/home/camiloiral/Workspace/kiwi_challenge/German_Traffic_Signs_Detector/models/model2/saved/lenet5_improved"

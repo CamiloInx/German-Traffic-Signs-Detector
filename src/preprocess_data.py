@@ -1,122 +1,165 @@
 from tqdm import tqdm
+from PIL import Image
 import numpy as np
 import click
 import os
 import cv2
 
 
-# def show_image(img):
-#     cv2.imshow('img', img)
-#     cv2.waitKey(5000)
-#     cv2.destroyAllWindows()
-
 def load_image(image_file):
     """
     Load RGB image from a file
+    Inputs:
+        image_file: image file to load
+    Return:
+        Image as numpy array with BGR format
     """
-    return cv2.imread(image_file)
+    try:
+        img = Image.open(image_file)
+        return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+
+    except IOError:
+        print("File {} is not a supported image file".format(image_file))
+
 
 def normalize_image(img):
+    """
+    Normalizes the image with min-max method
+    Inputs:
+        img: image to normalize
+    Return:
+        Normalized image
+    """
     return cv2.normalize(img,  None, 0, 255, cv2.NORM_MINMAX)
 
-def resize(img, width, height):
+
+def resize(img, img_size):
     """
-    Resize the image to the input shape used by the network model
+    Resize the image to the specified img_size
+    Inputs:
+        img_size: New size of the image
+    Return:
+        Resized image. Shape (img_size, img_size, 3)
     """
-    return cv2.resize(img, (width, height), cv2.INTER_AREA)
+    return cv2.resize(img, (img_size, img_size), cv2.INTER_AREA)
+
 
 def translate_image(img, args):
-    """Translates the image in x and y a percentage between 0 and 1"""
+    """
+    Translates the image in x and y a percentage between 0 and 1
+    Inputs:
+        img: Image to translate
+        args: Dictionary with "translate" argument
+    Return:
+        Image translated a percentage value in x and y axis
+    """
     rows, cols, _ = img.shape
     M = np.float32([[1,0,int(cols*args["translate"])],[0,1,int(rows*args["translate"])]])
+
     return cv2.warpAffine(img,M,(cols,rows))
 
+
 def rotate_image(img, args):
+    """
+    Rotates the image a given angle between 0 and 360 degrees
+    Inputs:
+        img: Image to rotate
+        args: Dictionary with "angle" argument
+    Return:
+        Image rotated the given angle
+    """
     rows, cols, _ = img.shape
     M = cv2.getRotationMatrix2D((cols/2, rows/2), args["angle"], 1)
+
     return cv2.warpAffine(img, M,(cols, rows))
 
+
 def flip(img, args):
-    """ Flips the image orientation"""
+    """
+    Flips the image orientation
+    Inputs:
+        img: Image to flip
+        args: Dictionary with "orientation" argument
+    Return:
+        Image flipped to the given orientation.
+        "orientation" = 0, flips the image horizontally
+    """
     return cv2.flip(img, args["orientation"])
 
+
 def ligth_condition(img, args):
-    """ Change ligthning condition in the image"""
+    """
+    Change ligthning condition in the image
+    Inputs:
+        img: Image to change ligthning
+        args: Dictionary with "gamma" argument
+    Return:
+        Image with ligthning values changed
+    """
     invGamma = 1.0 / args["gamma"]
     table = np.array([((i / 255.0) ** invGamma) * 255 for i in np.arange(0, 256)]).astype("uint8")
+
     return cv2.LUT(img, table)
 
-def pass_image(img, args):
-    return img
 
 def augment_data(img, file, functions, args):
+    """
+    Applies all the created image transformation functions
+    and augments the passed image
+    Inputs:
+        img: Image to transform
+        file: file name of the image
+        functions: list with the transformation function operations
+        args: Dictionary with the argument values if the function transformations
+    Return:
+        None
+    """
+    # Extract the class from the file name
     label, name = file.split("_")
     count = 0
+    # Apply the image transformations and save the image changes
     for function in functions:
         image = function(img, args)
-        image = resize(image, args["width"], args["height"])
+        image = resize(image, img_size=args["size"])
         cv2.imwrite(label+"_"+str(count)+"_"+name, image)
         count += 1
 
-def load_dataset(d, width, height):
+
+def load_dataset(d, img_size, mode = "train-test"):
+    """
+    Loads all the images
+    Inputs:
+        d: Directory with the images
+        img_size: New size of the image
+        mode: Mode to load the data. Values: "train-test" or "predict"
+    Return:
+        If mode = "train-test" return images and labels
+        If mode = "predict" returns images only
+    """
     os.chdir(d)
     files = os.listdir(d)
+
+    if not mode in ["train-test", "predict"]:
+        raise ValueError("No valid loading mode. Select between 'train-test' or 'predict' mode.")
+
     print("#============ Loading Data ============#")
     images = []
     labels = []
+
+    # Load, resize and normalize the images from folder
     for file in tqdm(files):
-        if os.path.isfile(file) and ".ppm" in file:
+        if os.path.isfile(file):
             img = load_image(file)
-            img = resize(img, width, height)
+            img = resize(img, img_size)
             img = normalize_image(img)
             images.append(img)
-            labels.append(int(file.split("_")[0]))
+            if mode == "train-test":
+                # Extracts the label from the file name
+                labels.append(int(file.split("_")[0]))
 
-    X, Y, classes = np.array(images), np.array(labels), set(labels)
-
-    return X, Y, classes
-
-@click.group()
-def main():
-    pass
-
-@main.command()
-@click.option('-d', default=os.getcwd(),
-              help='Directory to augment images')
-def augment(d):
-    os.chdir(d)
-    args = {
-            "translate": 0.2,
-            "angle": 45,
-            "orientation": 0,
-            "gamma": 1.5,
-            "width": 32,
-            "height": 32
-            }
-    files = os.listdir(d)
-    functions = [translate_image, rotate_image, flip, ligth_condition, pass_image]
-    print("#============ Augmenting Data ============#")
-    for file in tqdm(files):
-        if os.path.isfile(file) and ".ppm" in file:
-            img = load_image(file)
-            augment_data(img, file, functions, args)
-
-if __name__ == '__main__':
-    main()
-
-# def add_noise(img):
-#     row,col,ch= img.shape
-#     mean = 0
-#     var = 0.1
-#     sigma = var**0.5
-#     gauss = np.random.normal(mean,sigma,(row,col,ch))
-#     gauss = gauss.reshape(row,col,ch)
-#     noisy = (img + gauss)/255
-#     show_image(noisy)
-
-# Realizar data augmentation en los datos de entrenamiento
-# Color shift or PCA color augmentation
-# Add noise to image (pepper, gaussiang blur)
-# Normalizar las imagenes
-# Escribir la descripción de cada funcion
-# Agregar todas las opciones para las entradas por la terminal
+    if mode == "train-test":
+        X, Y = np.array(images), np.array(labels)
+        return X, Y
+    elif mode == "predict":
+        X = np.array(images)
+        return X

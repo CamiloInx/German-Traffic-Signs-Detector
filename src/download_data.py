@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 import requests
 import zipfile
 import shutil
@@ -8,15 +7,16 @@ import os
 import io
 
 
-def download_traffic_sign_data(zip_file_url, path, save_zip = False):
+def download_traffic_sign_data(zip_file_url, path, save_zip):
     """
     Downloads a zip file containig the German Traffic Sign Detection Benchmark
     and unzips the data cointained inside the folders of the zip file.
     Inputs:
         zip_file_url: url to the ziped data
         path: path to save the data
+        save_zip: save the downloaded zip file
     Returns:
-        String with current working directory
+        String with the images directory
     """
     if os.path.exists(path+'/FullIJCNN2013'):
         print("Data already exists")
@@ -29,7 +29,8 @@ def download_traffic_sign_data(zip_file_url, path, save_zip = False):
         os.makedirs("images")
 
     os.chdir(path+"/images")
-    print("Downloading images")
+    print("#============ Downloading images ============#")
+    print("Please wait until the downloading process finishes")
 
     # Downlods the zip file
     r = requests.get(zip_file_url)
@@ -60,8 +61,7 @@ def split_data(path, test_size= 0.2):
         path: Location of the Dataset folder
         test_size: Size of the test data (between 0 and 1)
     Return:
-        train: path to the files corresponding to the train set
-        test: path to the files corresponding to the test set
+        None
     """
     os.chdir(path)
     # Creates train, test and user directories if they don't exist
@@ -76,7 +76,7 @@ def split_data(path, test_size= 0.2):
 
     dataset  = os.path.join(path, "FullIJCNN2013")
     dirs = os.listdir(dataset)
-    print("Splitting data")
+    print("#============ Splitting data ============#")
 
     for dir in dirs:
         files = os.listdir(os.path.join(dataset, dir))
@@ -94,29 +94,3 @@ def split_data(path, test_size= 0.2):
 
     shutil.rmtree(dataset) # Remove data directory
     print("Train and test data splitted correctly")
-
-    return train, test
-
-
-@click.group()
-def main():
-    pass
-
-
-@main.command()
-@click.option('-url', default="http://benchmark.ini.rub.de/Dataset_GTSDB/FullIJCNN2013.zip",
-              help='Url to download zip file', required=False)
-@click.option('-d', default=os.getcwd(),
-              help='Directory to download data')
-@click.option('-save', default=False,
-              help='Keep downloaded zip file')
-@click.option('-test_size', default=0.2,
-              help='Percentage of data to keep')
-def download(url, d, save, test_size):
-    """ Downloads and unzips the traffic sign detection  dataset"""
-    path = download_traffic_sign_data(url, d, save)
-    split_data(path, test_size)
-
-
-if __name__ == '__main__':
-    main()

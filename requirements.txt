@@ -1,0 +1,16 @@
+tensorflow>=1.7.0
+sklearn>=0.19.1
+numpy==1.14.2
+itertools>=2.3
+requests==2.18.4
+zipfile>=python3.5.2
+pickle<=3.0
+shutil>=python3.5.2
+matplotlib==2.2.2
+tqdm>=4.22.0
+PIL==5.0.0
+click>=6.7
+sys>=python3.5.2
+cv2>=3.4.0
+os>=python3.5.2
+io>=python3.5.2
